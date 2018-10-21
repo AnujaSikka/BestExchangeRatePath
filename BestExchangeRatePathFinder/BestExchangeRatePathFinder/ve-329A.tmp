@@ -1,0 +1,99 @@
+//#include "stdafx.h"
+#include <iostream> 
+
+
+ 
+#include "ExchangeRateGraph.h"
+
+using namespace std;
+
+
+int main()
+{
+	string inLine;
+
+	
+	ExchangeRateGraph *ptrObjRateGraph = new ExchangeRateGraph();
+
+	istream s("2017-11-09T09:44:34+00:00 KRAKEN BTC USD 1000.0 0.0009
+		2017-11-09T09:42:34+00:00 GDAX BTC USD 1001.0 0.0008
+		2018-11-09T09:42:34+00:00 KRAKEN BTC USD 1001.0 0.0007
+		2018-11-09T09:41:34+00:00 GDAX BTC USD 1000.0 0.0007");
+	while(getline(s, inLine) && !inLine.empty())
+	//inLine = "2017-11-09T09:44:34+00:00 KRAKEN BTC USD 1000.0 0.0009";
+	{		
+		stringstream ss( inLine );
+		string field;
+		bool bExRateReq = false;
+		if(getline(ss, field, ' ') && !field.empty())
+		{
+			if(field.compare("EXCHANGE_RATE_REQUEST"))
+			{
+				structEdgeTime stEdgeTime;
+				string strDateTime =  field;
+				stEdgeTime.StrToTimeStamp(field);			
+		
+				string exchange, srcCurr, destCurr;
+				double forFactor, backFactor;
+				if(getline(ss, field, ' ') && !field.empty())
+				{			
+					exchange = field;
+				}
+				if(getline(ss, field, ' ') && !field.empty())
+				{
+					srcCurr = field;
+				}
+				if(getline(ss, field, ' ') && !field.empty())
+				{
+					destCurr = field;
+				}
+				if(getline(ss, field, ' ') && !field.empty())
+				{
+					forFactor = atof(field.c_str());
+				}
+				if(getline(ss, field, ' ') && !field.empty())
+				{
+					backFactor = atof(field.c_str());
+				}
+
+				Vertex *srcVertex = new Vertex(exchange + srcCurr);				
+				Vertex *destVertex = new Vertex(exchange + destCurr);
+				srcVertex->addEdge(destVertex, forFactor, stEdgeTime);
+				destVertex->addEdge(srcVertex, backFactor, stEdgeTime);
+
+				
+					ptrObjRateGraph->insert(srcVertex);
+				
+					ptrObjRateGraph->insert(destVertex);
+			}
+			else
+			{
+				structExchangeRateReq *stExReqData = new structExchangeRateReq;
+				if(getline(ss, field, ' ') && !field.empty())
+				{
+					stExReqData->srcExchange = field;
+				}
+				if(getline(ss, field, ' ') && !field.empty())
+				{
+					stExReqData->srcCurr = field;
+				}
+				if(getline(ss, field, ' ') && !field.empty())
+				{
+					stExReqData->destExchange = field;
+				}
+				if(getline(ss, field, ' ') && !field.empty())
+				{
+					stExReqData->destCurr = field;
+				}
+
+				//ptrObjRateGraph->CalcBestExRate(*stExReqData);
+
+			}
+		}
+	}
+
+
+	
+	return 0;
+	
+}

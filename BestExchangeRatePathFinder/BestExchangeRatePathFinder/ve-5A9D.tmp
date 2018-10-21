@@ -1,0 +1,54 @@
+#include "ExchangeRateGraph.h"
+
+
+
+bool ExchangeRateGraph::IsVertexPresent(pair<string, string> &vertex)
+{
+	for(int i = 0; i < vecVertex.size(); i++)
+	{
+		if(vecVertex[i] == vertex)
+		{
+			return true;
+		}
+	}
+	return false;
+	
+}
+bool ExchangeRateGraph::IsEdgePresent(pair<string, string> &src, pair<string, string> &dest)
+{
+	if(mapRate.find(make_pair(src, dest)) != mapRate.end())
+		return true;
+
+	return false;
+}
+void ExchangeRateGraph::UpdateEdge(pair<string, string> &src, pair<string, string> &dest, float weight)
+{
+	mapRate[make_pair(src, dest)] = weight;
+	mapNext[make_pair(src, dest)] = dest;
+}
+void ExchangeRateGraph::AddVertex(pair<string, string> &src)
+{
+	vecVertex.push_back(src);
+}
+
+void ExchangeRateGraph::Update(structPriceUpdateData &stPUData)
+{
+	pair<string, string> srcCurrExPair = make_pair(stPUData.exchange, stPUData.srcCurr);
+	pair<string, string> destCurrExPair = make_pair(stPUData.exchange, stPUData.destCurr);
+
+	if(!IsVertexPresent(srcCurrExPair))		
+	{
+		AddVertex(srcCurrExPair);
+	}
+
+	if(!IsVertexPresent(destCurrExPair))		
+	{
+		AddVertex(destCurrExPair);
+	}
+
+	if(!IsEdgePresent(srcCurrExPair, destCurrExPair)))
+	{
+		UpdateEdge(srcCurrExPair, destCurrExPair, stPUData.forFactor);
+		UpdateEdge(destCurrExPair, srcCurrExPair, stPUData.backFactor);
+	}	
+}

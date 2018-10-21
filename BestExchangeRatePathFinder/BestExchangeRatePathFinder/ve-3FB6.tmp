@@ -1,0 +1,358 @@
+
+#include <vector>
+#include <map>
+#include <string>
+#include <fstream>
+#include <sstream>
+#include "windows.h"
+#include <time.h>
+
+using namespace std;
+
+
+struct structEdgeTime
+{
+	SYSTEMTIME tm;
+
+	bool StrToTimeStamp(string tp)
+	{
+		stringstream ss(tp);
+		string field;
+		//LPSYSTEMTIME lpSysTm;
+		//GetSystemTime(lpSysTm);
+		if(getline(ss, field, '-'))
+		{
+			if(field.empty())
+			{
+				cout<<"Invalid Year";
+				return false;
+			}
+			tm.wYear = atoi(field.c_str());
+			if(tm.wYear > 2000 || tm.wMonth < 2018))
+			{
+				cout<<"Invalid Month";
+				return false;
+			}
+		}
+		if(getline(ss, field, '-'))
+		{
+			if(field.empty())
+			{
+				cout<<"Invalid Month";
+				return false;
+			}
+			tm.wMonth = atoi(field.c_str());
+			if(tm.wMonth > 12 || tm.wMonth < 1)
+			{
+				cout<<"Invalid Month";
+				return false;
+			}
+		}
+		if(getline(ss, field, 'T'))
+		{
+			if(field.empty())
+			{
+				cout<<"Invalid date";
+				return false;
+			}
+			tm.wDay = atoi(field.c_str());
+		}
+		if(getline(ss, field, ':') && !field.empty())
+		{
+			tm.wHour = atoi(field.c_str());
+		}
+		if(getline(ss, field, ':') && !field.empty())
+		{
+			tm.wMinute = atoi(field.c_str());
+		}
+		if(getline(ss, field, '+') && !field.empty())
+		{
+			tm.wSecond = atoi(field.c_str());
+		}
+		if(getline(ss, field, ':') && !field.empty())
+		{
+			tm.wHour += atoi(field.c_str());
+		}
+		if(getline(ss, field) && !field.empty())
+		{
+			tm.wMinute += atoi(field.c_str());
+		}
+
+		while(tm.wMinute > 59)
+		{
+			tm.wMinute -= 59;
+			tm.wHour += 1;
+		}
+
+		while(tm.wHour > 23)
+		{
+			tm.wHour -= 23;
+			tm.wDay += 1;
+		}
+
+		switch(tm.wMonth)
+		{
+		case 1:
+		case 3:
+		case 5:
+		case 7:
+		case 8:
+		case 10:
+		case 12:
+			{
+				if(tm.wDay > 31)
+				{
+					tm.wDay -= tm.wDay;
+					tm.wMonth += tm.wMonth;
+				}				
+			}
+			break;
+		case 2:
+			{
+				if(tm.wYear%4 == 0 || tm.wYear%400 == 0)
+				{
+					if(tm.wDay > 29)
+					{
+						tm.wDay -= tm.wDay;
+						tm.wMonth += tm.wMonth;
+					}
+				}
+				else
+				{
+					if(tm.wDay > 28)
+					{
+						tm.wDay -= tm.wDay;
+						tm.wMonth += tm.wMonth;
+					}
+				}				
+			}
+			break;
+		default:
+			{
+				if(tm.wDay> 30)
+				{
+					tm.wDay -= tm.wDay;
+					tm.wMonth += tm.wMonth;
+				}
+			}
+		}
+		
+		if(tm.wMonth > 12)
+		{
+			tm.wMonth -= tm.wMonth;
+			tm.wYear += tm.wYear;
+		}
+
+		return true;
+
+	}
+		
+	bool operator >(const structEdgeTime& rhs)
+	{
+		if(tm.wYear > rhs.tm.wYear)
+			return true;
+		if(tm.wYear < rhs.tm.wYear)
+			return false;
+	}
+};
+
+
+class Vertex;
+//string Vertex::getName();
+
+class Edge
+{
+public:
+    Edge(Vertex *org, Vertex *dest, double wgt, structEdgeTime tm)
+    {
+        m_origin = org;
+        m_destination = dest;
+        m_weight = wgt;
+		m_timestamp = tm;
+    }
+
+    Vertex* getOrigin() {return m_origin;}
+    Vertex* getDestination() {return m_destination;}
+    double getWeight() {return m_weight;}
+	structEdgeTime getTimeStamp () {return m_timestamp;}
+
+	void UpdateEdge(float wgt, structEdgeTime tm)
+	{
+		m_weight = wgt;
+		m_timestamp = tm;
+	}
+	bool operator ==(const Edge& rhs) 
+	{
+		if((this->getOrigin() == const_cast<Edge&>(rhs).getOrigin()) && 
+			(this->getDestination() == const_cast<Edge&>(rhs).getDestination()))
+			return true;
+
+		return false;
+	}
+private:
+    Vertex* m_origin;
+    Vertex* m_destination;
+    double m_weight;
+	structEdgeTime m_timestamp;
+};
+
+
+
+class Vertex
+{
+public:
+	Vertex(){}
+    Vertex(string id)
+    {
+        m_name = id;
+    }
+
+    void addEdge(Vertex *v, double wgt, structEdgeTime tm)
+    {
+        Edge newEdge(this, v, wgt, tm);
+        m_edges.push_back(newEdge);
+    }
+	void UpdateEdge(Edge *edge, double wgt, structEdgeTime tm)
+	{
+		edge->UpdateEdge(wgt, tm);
+	}
+
+	Edge* FindEdge(Vertex *v)
+	{
+		for(int i = 0; i < m_edges.size(); i++)
+		{
+			if(m_edges[i].getDestination()->getName() == v->getName())
+				return &m_edges[i];
+		}
+		return NULL;
+	}
+    string getName() {return m_name;} 
+    vector<Edge> getEdges() {return m_edges;}
+
+private:
+    string m_name;
+    vector<Edge> m_edges;
+};
+
+
+class ExchangeRateGraph
+{
+public:	
+	void insert(Vertex *v)
+    {
+		if(Vertex *ver = findVertex(v->getName()))
+		{
+			Edge eg = v->getEdges()[0];
+			Edge *edge = ver->FindEdge(eg.getDestination());
+			if(edge)
+			{
+				if(IsLaterTimeStamp(*edge, eg))
+				{
+					ver->UpdateEdge(edge, eg.getWeight(), eg.getTimeStamp());
+					return;
+				}
+			}
+			else
+			{
+				ver->addEdge(eg.getDestination(), eg.getWeight(), eg.getTimeStamp());
+				return;
+			}
+		}
+		AddVertex(v);        
+    }
+	void AddInterExgEdges(vector<string> exgs, vector<string> currs)
+	{
+		for(int i = 0; i < currs.size(); i++)
+		{
+			for(int j = 0; j < exgs.size(); j++)
+			{
+				string verName = exgs[j]+","+currs[i];
+				if(Vertex *srcVer = findVertex(verName))
+				{
+					for(int k = 0; k < exgs.size(); k++)
+					{
+						if(j == k)
+							continue;
+						Vertex *destVer = new Vertex(exgs[k]+","+currs[i]);
+						Edge *edge = srcVer->FindEdge(destVer);
+						if(!edge)
+						{
+							structEdgeTime st;
+							st.StrToTimeStamp("00-00-00T00:00:00+00:00");
+							srcVer->addEdge(destVer, 1.0, st);
+						}
+					}
+				}
+			}
+		}
+
+
+	}
+	void AddVertex(Vertex *ver)
+	{
+		if(!ver)
+			return;
+		m_vertices.push_back(ver);
+	}
+	Vertex* findVertex(string name)
+	{
+		for(int i = 0; i < m_vertices.size(); i++)
+		{
+			if(m_vertices[i]->getName() == name)
+				return m_vertices[i];
+			
+		}
+		return NULL;
+	}
+	
+	bool IsLaterTimeStamp(Edge oldEdge, Edge newEdge)
+	{
+		structEdgeTime stNewTime, stOldTime;
+		stNewTime = newEdge.getTimeStamp();	
+		stOldTime = oldEdge.getTimeStamp();	
+
+		if(stNewTime > stOldTime)
+			return true;
+
+		return false;
+	}
+	vector<Vertex*> getVertices(){return m_vertices;}
+	private:
+    vector<Vertex*> m_vertices;
+};
+
+
+   
+//private:
+//    vector<Vertex*> vertices;
+//private:
+//		
+//	map < Vertex, map <Vertex, float>> mapRate;
+//	map < Vertex, map <Vertex, Vertex>> mapNext;
+//	vector <Vertex> vecVertex;
+//
+//public:
+//	ExchangeRateGraph()
+//	{
+//		mapRate.empty();
+//		mapNext.empty();
+//		vecVertex.empty();
+//	}
+//	bool IsVertexPresent(pair<string, string> vertex);
+//	bool IsEdgePresent(pair<string, string> &src, pair<string, string> &dest);
+//	void UpdateEdge(pair<string, string> &src, pair<string, string> &dest, float wgt);
+//	void AddVertex(pair<string, string> &src);
+//	void Update(structPriceUpdateData &stPUData);
+//
+//	void CalcBestExRate(structExchangeRateReq &stExRateReqData);
+//
+//};
+
+
+
+
+
+
+
+
+
